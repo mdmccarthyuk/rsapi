@@ -50,10 +50,12 @@ def main():
   else:
     print "ERROR: Volume could not be found"
     sys.exit(1)
-  targetVolume.listAll()
+#  targetVolume.listAll()
   # Exit here for testing
-  sys.exit(0)
+#  sys.exit(0)
   print "Cloning volume"
+  # Set type to SSD so clone produces an SSD
+  targetVolume.volume_type="SSD"
   newID = targetVolume.clone(jobObj['job']['newName'],jobObj['job']['newDesc'])
   if not newID:
     print "ERROR: Disk could not be cloned"
@@ -69,14 +71,17 @@ def main():
     print "ERROR: Old disk could not be found"
     sys.exit(1)
   print "  Old ID: %s" % oldID
-  print "Attaching volume"
-  targetVolume.attach(newID,serverID,"/dev/xvdc")
-  time.sleep(30)
   print "Detaching volume"
-  targetVolume.detach(newID,serverID,"/dev/xvdc")
+  targetVolume.detach(oldID,serverID,"/dev/xvdb")
   time.sleep(30)
-  print "Deleting volume"
-  targetVolume.delete(newID)
+  print "Attaching volume"
+  targetVolume.attach(newID,serverID,"/dev/xvdb")
+  time.sleep(30)
+#  print "Detaching volume"
+#  targetVolume.detach(newID,serverID,"/dev/xvdc")
+#  time.sleep(30)
+#  print "Deleting volume"
+#  targetVolume.delete(newID)
 
 def rsGetVolumeID(token,volumeName,account):
   req = urllib2.Request('https://lon.blockstorage.api.rackspacecloud.com/v1/'+account+'/volumes')
