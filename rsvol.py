@@ -68,7 +68,7 @@ class RSVolume:
         "display_description": newDesc,
         "size": self.size,
         "volume_type": self.volume_type,
-        "source_volID": self.ID
+        "source_volid": self.ID
       }
     }
     volData = json.dumps(newVol)
