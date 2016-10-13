@@ -84,6 +84,7 @@ class RSVolume:
     newVolID = newVolObj['volume']['id']
     return newVolID 
 
+  # Lists all volumes
   def listAll(self):
     self.checkToken("listAll")
     print "All Volumes:"
@@ -94,6 +95,7 @@ class RSVolume:
     for volume in volumeObj['volumes']:
       print "%s - %s" % (volume['display_name'],volume['id'])
 
+  # Delete the volume with specified ID of volID
   def delete(self,volID):
     self.checkToken("delete")
     req = urllib2.Request(RSVolume.endpoint+"/"+volID)
@@ -102,6 +104,7 @@ class RSVolume:
     res = urllib2.urlopen(req)
     print res.code
 
+  # Show the detail of volume matching ID volID
   def showDetail(self,volID):
     self.checkToken("showDetail")
     req = urllib2.Request(RSVolume.endpoint+"/"+volID)
@@ -110,7 +113,8 @@ class RSVolume:
     volumeObj = json.loads(res.read())
     for key in volumeObj['volume']:
       print "%s = %s" % (key, volumeObj['volume'][key])
-   
+  
+  # Simple block - wait for a clone to complete 
   def waitComplete(self,volID):
     self.checkToken("waitComplete")
     cloneProgress = "0%"
@@ -156,22 +160,24 @@ class RSVolume:
     return attachRes['volumeAttachment']['id']
 
   # Returns the volume ID of a volume attached to a server.  Matches on device name (eg /dev/xvdb1) 
+  # Returns False if no match found
   def getIDByAttachedDevice(self,serverID,deviceName):
     self.checkToken("getIDByAttachedDevice")
     req = urllib2.Request(RSVolume.serverEndpoint+"/"+serverID+"/os-volume_attachments")
     req.add_header("X-Auth-Token",RSVolume.authToken)
+    res = urllib2.urlopen(req)
+    attachedRes = json.loads(res.read())
+    for volume in attachedRes['volumeAttachments']:
+      if volume['device'] == deviceName:
+        return volume['id']
+    return False
 
+  # Detaches a disk from a server - matches on device name (eg /dev/xvdb1)
+  # Returns False on error or True on success. 
   def detach(self,volID,serverID,deviceName):
     self.checkToken("detach")
     print "Detaching" 
-    req = urllib2.Request(RSVolume.serverEndpoint+"/"+serverID+"/os-volume_attachments")
-    req.add_header("X-Auth-Token",RSVolume.authToken)
-    res = urllib2.urlopen(req)
-    attachedRes = json.loads(res.read())
-    targetID = None
-    for volume in attachedRes['volumeAttachments']:
-      if volume['device'] == deviceName:
-        targetID = volume['id']
+    targetID = self.getIDByAttachedDevice(serverID,deviceName)
     if targetID is None:
       return False
     req2 = urllib2.Request(RSVolume.serverEndpoint+"/"+serverID+"/os-volume_attachments/"+targetID)
@@ -182,6 +188,7 @@ class RSVolume:
     except urllib2.HTTPError as err:
       print "ERROR: detaching %s" % err.code
       return False
+    return True
  
 if __name__ == "__main__":
   sys.exit(0)

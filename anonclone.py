@@ -9,6 +9,7 @@ import time
 
 from rsvol import RSVolume
 from rsauth import RSAuthToken
+from rsserver import RSServer
 
 authFile = "acc.json"
 jobFile = "job.json"
@@ -29,7 +30,13 @@ def main():
   print "Getting auth token"
   authToken.getToken()
   print "Getting server ID"
-  serverID = rsGetServerID(authToken.token,jobObj['job']['server'],auth['auth']['account'])
+  targetServer = RSServer()
+  targetServer.setToken(authToken.token)
+  targetServer.setAccount(auth['auth']['account'])
+  serverID = targetServer.getIDByName(jobObj['job']['server'])
+  if not serverID:
+    print "ERROR: Can't find target server"
+    sys.exit(1)
   print "  Server: %s" % serverID
   print "Getting volume ID"
   targetVolume = RSVolume()
@@ -56,6 +63,12 @@ def main():
   targetVolume.showDetail(newID)
   print "Waiting for volume"
   targetVolume.waitComplete(newID)
+  print "Getting ID of /dev/xvdb"
+  oldID = targetVolume.getIDByAttachedDevice(serverID,"/dev/xvdb")
+  if not oldID:
+    print "ERROR: Old disk could not be found"
+    sys.exit(1)
+  print "  Old ID: %s" % oldID
   print "Attaching volume"
   targetVolume.attach(newID,serverID,"/dev/xvdc")
   time.sleep(30)
@@ -65,16 +78,6 @@ def main():
   print "Deleting volume"
   targetVolume.delete(newID)
 
-def rsGetServerID(token,serverName,account):
-  req = urllib2.Request('https://lon.servers.api.rackspacecloud.com/v2/'+account+'/servers')
-  req.add_header("X-Auth-Token",token)
-  res = urllib2.urlopen(req)
-  serverObj = json.loads(res.read())
-  for server in serverObj['servers']:
-    if server['name'] == serverName:
-      return server['id']
-  return False
- 
 def rsGetVolumeID(token,volumeName,account):
   req = urllib2.Request('https://lon.blockstorage.api.rackspacecloud.com/v1/'+account+'/volumes')
   req.add_header("X-Auth-Token",token)
